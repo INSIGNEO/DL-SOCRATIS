@@ -1,1 +1,5 @@
-# SOCRATIS
+# DL-SOCRATIS
+
+The DL-SOCRATIS pipeline builds on MA-SOCRATIS (\cite{our}) by modifying the initial myocardium segmentation step. Instead of a multi-atlas segmentation framework, in DL-SOCRATIS we use two different deep learning networks approaches. A combination of a convolution deep neural network based on \cite{Avendi2016} for left ventricle detection, and an u-net LGE-MRI trained network for the myocardium segmentation \cite{Ronneberger2015} (DLl-SOCRATIS). For the second approach we used a cycle-GAN network to translate the LGE-MR images to cine-MRI and segment the myocardium using an u-net network trained in cine-MR images (DLc-SOCRATIS).
+After the initial myocardium segmentation, MA-SOCRATIS \cite{our} uses a combination of thresholding and active-contour segmentation \cite{902291} algorithms for the epicardium and endocardium final contour segmentation. The automatic segmentation scar region technique is identical to that used in MA-SOCRATIS. \cite{our} utilise a combination of Rician-Gaussian mixture models histogram fitting (RGMM) and watershed segmentation constrained by seed points. The scar segmentation step is based on \cite{Hennemuth2008}, with some amendments to the watershed segmentation. 
+
