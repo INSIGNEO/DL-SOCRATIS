@@ -1,0 +1,35 @@
+file: cfg_includes/book1.cfg
+file: cfg_includes/book3.cfg
+file: cfg_includes/book4.cfg
+file: cfg_includes/book2.cfg
+file: cfg_includes/cfg_subincludes/extra1.cfg
+file: cfg_includes/cfg_subincludes/extra2.cfg
+books = ( 
+  {
+    title = "Treasure Island";
+    author = "Robert Louis Stevenson";
+    price = 29.99;
+    qty = 5;
+  }, 
+  {
+    title = "Farnham's Freehold";
+    author = "Robert A. Heinlein";
+    price = 4.99;
+    qty = 4;
+  }, 
+  {
+    title = "Ubik";
+    author = "Philip K. Dick";
+    price = 7.5;
+    qty = 5;
+    list = ( 1, 2, 3 );
+    array = [ 1, 2, 3, 4, 5, 6 ];
+    extra1 = "bar";
+    extra2 = 12345;
+  }, 
+  {
+    title = "Snow Crash";
+    author = "Neal Stephenson";
+    price = 9.99;
+    qty = 8;
+  } );

@@ -1,0 +1,13 @@
+set(ITKStatistics_LOADED 1)
+set(ITKStatistics_ENABLE_SHARED "0")
+set(ITKStatistics_DEPENDS "")
+set(ITKStatistics_PUBLIC_DEPENDS "")
+set(ITKStatistics_TRANSITIVE_DEPENDS "")
+set(ITKStatistics_PRIVATE_DEPENDS "")
+set(ITKStatistics_LIBRARIES "ITKStatistics")
+set(ITKStatistics_INCLUDE_DIRS "${ITK_INSTALL_PREFIX}/include/ITK-5.0")
+set(ITKStatistics_LIBRARY_DIRS "")
+set(ITKStatistics_RUNTIME_LIBRARY_DIRS "${ITK_INSTALL_PREFIX}/lib")
+set(ITKStatistics_TARGETS_FILE "${ITK_INSTALL_PREFIX}/lib/cmake/ITK-5.0/Modules/Targets/ITKStatisticsTargets.cmake")
+set(ITKStatistics_FACTORY_NAMES "")
+

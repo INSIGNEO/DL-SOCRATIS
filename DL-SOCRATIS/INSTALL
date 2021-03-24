@@ -1,0 +1,8 @@
+cd /to_src
+mkdir build
+cd build
+cmake ..
+make install .
+cmake ..
+
+READY

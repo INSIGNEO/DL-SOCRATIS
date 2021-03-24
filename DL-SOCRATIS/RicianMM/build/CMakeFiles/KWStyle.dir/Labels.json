@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/CMakeFiles/KWStyle"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/CMakeFiles/KWStyle.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/CMakeFiles/KWStyle-complete.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-install.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-mkdir.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-download.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-update.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-patch.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-configure.rule"
+		},
+		{
+			"file" : "/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-prefix/src/KWStyle-stamp/KWStyle-build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"KWStyle"
+		],
+		"name" : "KWStyle"
+	}
+}

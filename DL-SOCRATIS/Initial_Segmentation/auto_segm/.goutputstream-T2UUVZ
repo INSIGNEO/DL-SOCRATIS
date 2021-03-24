@@ -1,0 +1,487 @@
+#Author: Michail Mamalakis
+#Version: 0.1
+#Licence:
+#email:mmamalakis1@sheffield.ac.uk
+#Acknowledgement: https://github.com/ece7048/cardiac-segmentation-1/blob/master/rvseg/loss.py
+
+
+from __future__ import division, print_function
+from keras.losses import mean_squared_error, categorical_crossentropy, sparse_categorical_crossentropy, binary_crossentropy, kullback_leibler_divergence
+from keras import backend as K
+from keras.optimizers import SGD, RMSprop, Adagrad, Adadelta, Adam, Adamax, Nadam
+from auto_segm import config, regularization
+from keras.preprocessing.image import ImageDataGenerator
+from auto_segm.regularization import data_augmentation
+from keras import losses, optimizers, utils, metrics
+from keras.utils import multi_gpu_model
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+from scipy.spatial.distance import directed_hausdorff
+import tensorflow as tf
+from math import ceil
+import numpy as np
+import cv2
+import os
+import argparse
+
+class run_model:
+##################################################### INITIALIZATION ##########################################################
+	def __init__ (self, path_case ) :
+		args = config.parse_arguments()
+		self.ram= args.ram
+		self.ngpu=args.ngpu		
+		self.metrics=args.metrics
+		self.metrics1=args.metrics1
+		self.metrics2=args.metrics2
+		self.data_augm=args.data_augm		
+		self.batch_size=args.batch_size
+		self.batch_size_test=args.batch_size_test
+		self.epochs_roi= args.epochs_roi
+		self.epochs_main= args.epochs_main
+		self.num_cores=args.num_cores
+		self.path_case=path_case
+		self.validation_split=args.validation_split
+		self.validation=args.validation	
+		self.shuffle=args.shuffle
+		self.optimizer=args.pre_optimizer
+		self.weights=args.loss_weights
+		self.normalize_image=args.normalize
+		self.roi_shape=args.roi_shape_roi	
+		self.store_model=args.store_txt
+		self.weight_name='first'
+		self.early_stopping=args.early_stop
+		self.monitor=args.monitor_callbacks
+		self.mode=args.mode_convert
+		self.label_classes=args.label_classes
+		optimizer_args_roi = {
+			'lr':       args.roi_learning_rate,
+			'momentum': args.roi_momentum,
+			'decay':    args.roi_decay,
+			'seed':    args.roi_seed
+			}
+		optimizer_args = {
+			'lr':       args.learning_rate,
+			'momentum': args.momentum,
+			'decay':    args.decay,
+			'seed':    args.seed
+			}
+		if self.path_case=='roi':
+			for k in list(optimizer_args_roi):
+				if optimizer_args_roi[k] is None:
+					del optimizer_args_roi[k]
+			optimizer = self.pass_optimizer(args.roi_optimizer, optimizer_args_roi)
+			self.optimizer=optimizer
+			self.epochs=self.epochs_roi
+
+		if self.path_case=='main':
+			for k in list(optimizer_args):
+				if optimizer_args[k] is None:
+					del optimizer_args[k]
+			optimizer = self.pass_optimizer(args.m_optimizer, optimizer_args)
+			self.optimizer=optimizer
+			self.epochs=self.epochs_main
+
+		
+
+################################################# data_augmentationTRAINING ##############################################################
+
+
+	def run_training(self,loss_type, model_structure, X, Y):
+		# set GPU or CPU
+		#self.num_cores = 4
+
+		#if self.ram=='GPU':
+		 #   num_GPU = 1
+		  #  num_CPU = 1
+		#if self.ram=='CPU':
+		 #   num_CPU = 1
+		  #  num_GPU = 0
+		#initialize the tensorflow
+		#init_op = tf.global_variables_initializer()
+		#sess = tf.Session()
+		#sess.run(init_op)
+		#config = tf.ConfigProto(intra_op_parallelism_threads=self.num_cores, inter_op_parallelism_threads=self.num_cores, allow_soft_placement=True, device_count = {'CPU' : num_CPU, 'GPU' : num_GPU})
+		#session = tf.Session(config=config)
+		#K.set_session(session)
+		#fit generator of model (solver)
+		if self.ram=='GPU':
+			model_structure = multi_gpu_model(model_structure, gpus=self.ngpu)
+			self.batch_size=self.batch_size*self.ngpu
+		#define metrics for training
+		metrics_algorithm=self.metrics_generator()
+		if (self.label_classes=='both'):
+			loss=[self.load_loss(loss_type),self.load_loss(loss_type)]
+		else:
+			loss=self.load_loss(loss_type)
+		model_structure.compile(optimizer=self.optimizer,loss=loss, metrics=metrics_algorithm)
+		pass_total_validation_augment, pass_total_training_augment=[],[]
+		train_steps_per_epoch = ceil(len(X) / self.batch_size)
+
+		if self.normalize_image == 'True':
+			X=regularization.normalize(X)
+
+		if self.shuffle == 'True':
+			# shuffle images and masks in parallel
+			rng_state = np.random.get_state()
+			np.random.shuffle(X)
+			np.random.set_state(rng_state)
+			np.random.shuffle(Y)
+		#define callbacks
+		self.callbacks=self.callbacks_define(self.monitor,self.weight_name)
+		if self.validation=='on':
+			pass_total_validation_augmen, validation_augment= [],[]
+			split_index = int((1-self.validation_split) * len(X))
+			train_steps_per_epoch = ceil(split_index / self.batch_size)
+			val_steps_per_epoch = ceil((len(X) - split_index) / self.batch_size)
+
+			if self.data_augm == 'True':
+				# looop in the iterator to create all the augmented data
+
+				#training augmented data creation				
+				Xaug, Yaug, val_Xaug, val_Yaug= [], [], [], []
+				for i in data_augmentation(X[:split_index],Y[:split_index]):
+					Xaug.append(i[0])
+					Yaug.append(i[1])
+				# add the initial data
+				Xaug.append(X[:split_index])
+				Yaug.append(Y[:split_index])
+				#suffle the data
+				state = np.random.get_state()
+				np.random.shuffle(Xaug)
+				np.random.set_state(state)
+				np.random.shuffle(Yaug)
+				#reshape to (total_image,height,weight,channels)
+				Xaug1, Yaug2= np.asarray(Xaug) , np.asarray(Yaug)
+				Xaug1=Xaug1.reshape((Xaug1.shape[0]*Xaug1.shape[1],Xaug1.shape[2],Xaug1.shape[3],Xaug1.shape[4]))
+				Yaug2= Yaug2.reshape((Yaug2.shape[0]*Yaug2.shape[1],Yaug2.shape[4],Yaug2.shape[3],Yaug2.shape[2]))
+				#create an Image data generator
+				training_augment=ImageDataGenerator().flow(Xaug1, Yaug2, batch_size=self.batch_size)
+				print(Yaug2.shape, Xaug1.shape)
+				# validation augmented data creation
+				#for i in data_augmentation(X[split_index:],Y[split_index:]):
+				#	val_Xaug.append(i[0])
+				#	val_Yaug.append(i[1])
+				# add the initial data
+				val_Xaug.append(X[split_index:])
+				val_Yaug.append(Y[split_index:])
+				#suffle the data
+				if self.shuffle == 'True':
+					valstate = np.random.get_state()
+					np.random.shuffle(val_Xaug)
+					np.random.set_state(valstate)
+					np.random.shuffle(val_Yaug)
+				#reshape to (total_image,height,weight,channels)
+				val_Xaug1, val_Yaug2= np.asarray(val_Xaug) , np.asarray(val_Yaug)
+				val_Xaug1=val_Xaug1.reshape((val_Xaug1.shape[0]*val_Xaug1.shape[1],val_Xaug1.shape[2],val_Xaug1.shape[3],val_Xaug1.shape[4]))
+				val_Yaug2= val_Yaug2.reshape((val_Yaug2.shape[0]*val_Yaug2.shape[1],val_Yaug2.shape[4],val_Yaug2.shape[3],val_Yaug2.shape[2]))
+				#create an Image data generator
+				validation_augment=ImageDataGenerator().flow(val_Xaug1, val_Yaug2, batch_size=self.batch_size)
+				print(val_Yaug2.shape, val_Xaug1.shape)
+				# reset the epochs and split		
+				split_index = int((1-self.validation_split) * (len(val_Xaug1)+len(Xaug1)))
+				train_steps_per_epoch = ceil(split_index / self.batch_size)
+				val_steps_per_epoch = ceil(((len(val_Xaug1)+len(Xaug1)) - split_index) / self.batch_size)
+				# run the fitting
+				history = model_structure.fit_generator(training_augment, epochs=self.epochs, steps_per_epoch=train_steps_per_epoch, validation_data=validation_augment, validation_steps=val_steps_per_epoch, callbacks=self.callbacks, verbose=1)         
+			else:
+				if self.path_case=='main':
+					Y=Y.reshape(Y.shape[0],Y.shape[3],Y.shape[2],Y.shape[1]) # change for main case				
+
+				#fit the function
+				history = model_structure.fit_generator(ImageDataGenerator().flow(X[:split_index], Y[:split_index], batch_size=self.batch_size), epochs=self.epochs, steps_per_epoch=train_steps_per_epoch, validation_data=ImageDataGenerator().flow(X[split_index:], Y[split_index:], batch_size=self.batch_size),  validation_steps=val_steps_per_epoch, callbacks=self.callbacks, verbose=1)						
+		else:
+			if self.data_augm == 'True':
+				# looop in the iterator to create all the augmented data
+				Xaug, Yaug= [], []
+				
+				for i in data_augmentation(X,Y):
+					Xaug.append(i[0])
+					Yaug.append(i[1])
+				# add the initial data
+				Xaug.append(X)
+				Yaug.append(Y)
+				#suffle the data
+				if self.shuffle == 'True':
+					agstate = np.random.get_state()
+					np.random.shuffle(Xaug)
+					np.random.set_state(agstate)
+					np.random.shuffle(Yaug)
+				#reshape to (total_image,height,weight,channels)
+				Xaug1, Yaug2= np.asarray(Xaug) , np.asarray(Yaug)
+				Xaug1=Xaug1.reshape((Xaug1.shape[0]*Xaug1.shape[1],Xaug1.shape[2],Xaug1.shape[3],Xaug1.shape[4]))
+				Yaug2= Yaug2.reshape((Yaug2.shape[0]*Yaug2.shape[1],Yaug2.shape[4],Yaug2.shape[3],Yaug2.shape[2]))
+				print(Yaug2.shape, Xaug1.shape)
+				#create an Image data generator
+				training_augment=ImageDataGenerator().flow(Xaug1, Yaug2, batch_size=self.batch_size)
+				# reset the epochs and split		
+				split_index = int(len(Xaug1))
+				train_steps_per_epoch = ceil(split_index / self.batch_size)
+
+				history = model_structure.fit_generator(training_augment, epochs=self.epochs, steps_per_epoch=train_steps_per_epoch,callbacks=self.callbacks, verbose=1)         
+			else:
+				#fit the function
+				if self.path_case=='main':
+					Y=Y.reshape(Y.shape[0],Y.shape[3],Y.shape[2],Y.shape[1]) # change for main case 
+				history = model_structure.fit_generator(ImageDataGenerator().flow(X, Y, batch_size=self.batch_size), epochs=self.epochs, steps_per_epoch=train_steps_per_epoch,callbacks=self.callbacks, verbose=1)
+		# save model results
+
+		return model_structure, history
+
+##################################################### TESTING ##################################################################
+	def run_testing(self,loss_type,model_structure, X, Y):
+		# set GPU or CPU
+		if self.ram=='GPU':
+			model_structure = multi_gpu_model(model_structure, gpus=self.ngpu)
+			self.batch_size_test=self.batch_size_test*self.ngpu
+
+		if self.path_case=='main':
+			Y=Y.reshape(Y.shape[0],Y.shape[3],Y.shape[2],Y.shape[1]) # change for main case
+
+		#set metric and loss to model 
+		#define metrics for testing
+		metrics_algorithm=self.metrics_generator()
+
+		loss=self.load_loss(loss_type)
+		model_structure.compile(optimizer=self.optimizer,loss=loss, metrics=metrics_algorithm)
+		#predict the outputs
+		test_generator=ImageDataGenerator.flow(x=X, shuffle=False, batch_size=self.batch_size_test)
+		y_pred = model_structure.predict_generator(test_generator,steps=np.ceil(len(X)/self.batch_size_test))
+		#evaluate the results
+		metric=model_structure.evaluate(x=X, y=Y, batch_size=self.batch_size_test, verbose=1, sample_weight=None, steps=None)
+		return y_pred, metric 
+############################################ metric, loss, optimizzer choices, callbacks################## 
+
+	def callbacks_define(self,monitor,weight_name):
+		# call backs of the weights
+		filepath=str(self.store_model + "/weights_%s_%s.hdf5" % (self.path_case,weight_name))
+		print(filepath)
+		monitor=monitor
+		checkpoint = ModelCheckpoint(filepath=filepath, monitor=monitor, verbose=1, save_best_only=True, save_weights_only=True, mode=str(self.mode))
+		callbacks = [checkpoint]
+
+		if self.early_stopping =='True':
+			stop_points=EarlyStopping(monitor=monitor, min_delta=0, patience=0, verbose=1, mode=str(self.mode), baseline=None, restore_best_weights=True)
+			callbacks = [checkpoint, stop_points]
+		return callbacks
+
+
+	def pass_optimizer(self,optimizer_name, optimizer_args):
+		optimizers = {
+		'sgd': SGD,
+		'rmsprop': RMSprop,
+		'adagrad': Adagrad,
+		'adadelta': Adadelta,
+		'adam': Adam,
+		'adamax': Adamax,
+		'nadam': Nadam,
+		}
+		if optimizer_name not in optimizers:
+			raise Exception("Unknown optimizer ({}).".format(optimizer_name))
+		return optimizers[optimizer_name](**optimizer_args)
+
+	def pass_metric(self,metric_name,class_num):
+		if (metric_name == "customized_loss"):
+			return self.customized_loss 
+		if (metric_name == "weighted_categorical_crossentropy"):				
+			return self.weighted_categorical_crossentropy
+		if (metric_name == "jaccard_loss"):
+			return self.jaccard_loss
+		if (metric_name == "hard_jaccard"):
+			return self.hard_jaccard
+		if (metric_name == "soft_jaccard"):
+			return self.soft_jaccard
+		if (metric_name == "sorensen_dice_loss"):
+			return self.sorensen_dice_loss
+		if (metric_name == "hard_sorensen_dices"):
+			return self.hard_sorensen_dice
+		if (metric_name == "soft_sorensen_dice"):
+			return self.soft_sorensen_dice
+		if (metric_name == "mean_squared_error"):
+			return mean_squared_error
+		if (metric_name == "kullback_leibler_divergence"):
+			return kullback_leibler_divergence
+		if (metric_name == "binary_crossentropy"):
+			return binary_crossentropy
+		if (metric_name == "sparse_categorical_crossentropy"):
+			return sparse_categorical_crossentropy
+		if (metric_name == "categorical_crossentropy"):
+			return categorical_crossentropy
+		if (metric_name == "accuracy"):
+			return metrics.binary_accuracy
+		if (metric_name=="categorical_accuracy"):
+			return metrics.categorical_accuracy
+		if (metric_name == "sparce_categorical_accuracy"):
+			return metrics.sparce_categorical_accuracy
+		if (metric_name == "dice"):
+			return self.dice
+		if (metric_name == "jaccard"):
+			return self.jaccard
+		if (metric_name == "average_Hausdorff"):
+			return self.average_Hausdorff_distance
+		if metric_name==" " :
+			raise Exception("None metric ({}).".format(metric_name))
+
+
+	def load_loss(self, loss_check):
+		if (loss_check == "customized_loss"):
+			def lossfunction(y_true, y_pred):
+				return self.customized_loss(y_true, y_pred) 
+		if (loss_check == "weighted_categorical_crossentropy"):
+			def lossfunction(y_true, y_pred):				
+				return self.weighted_categorical_crossentropy(y_true, y_pred)
+		if (loss_check == "jaccard_loss"):
+			def lossfunction(y_true, y_pred):
+				return self.jaccard_loss(y_true, y_pred)
+		if (loss_check == "hard_jaccard"):
+			def lossfunction(y_true, y_pred):
+				return self.hard_jaccard(y_true, y_pred)
+		if (loss_check == "soft_jaccard"):
+			def lossfunction(y_true, y_pred):
+				return self.soft_jaccard(y_true, y_pred)
+		if (loss_check == "sorensen_dice_loss"):
+			def lossfunction(y_true, y_pred):
+				return self.sorensen_dice_loss(y_true, y_pred)
+		if (loss_check == "hard_sorensen_dices"):
+			def lossfunction(y_true, y_pred):
+				return self.hard_sorensen_dice(y_true, y_pred)
+		if (loss_check == "soft_sorensen_dice"):
+			def lossfunction(y_true, y_pred):
+				return self.soft_sorensen_dice(y_true, y_pred)
+		if (loss_check == "mean_squared_error"):
+			def lossfunction(y_true, y_pred):
+				return mean_squared_error(y_true, y_pred)
+		if (loss_check == "kullback_leibler_divergence"):
+			def lossfunction(y_true, y_pred):
+				return kullback_leibler_divergence(y_true, y_pred)
+		if (loss_check == "binary_crossentropy"):
+			def lossfunction(y_true, y_pred):
+				return binary_crossentropy(y_true, y_pred)
+		if (loss_check == "sparse_categorical_crossentropy"):
+			def lossfunction(y_true, y_pred):
+				return sparse_categorical_crossentropy(y_true, y_pred)
+		if (loss_check == "categorical_crossentropy"):
+			def lossfunction(y_true, y_pred):
+				return categorical_crossentropy(y_true, y_pred)
+		if (loss_check == "dice"):
+			def lossfunction(y_true, y_pred):
+				return self.dice(y_true, y_pred,0)
+		if (loss_check == "jaccard"):
+			def lossfunction(y_true, y_pred):
+				return self.jaccard(y_true, y_pred,0)
+		if (loss_check == "average_Hausdorff"):
+			def lossfunction(y_true, y_pred):
+				return self.average_Hausdorff_distance(y_true, y_pred)
+		return lossfunction
+
+	def metrics_generator(self):
+		#metrics with respect the classes only for dice and jaccard and only for two classes
+		if self.label_classes=='both':
+			if self.metrics1=='dice' or self.metrics1=='jaccard':
+				metrics_algorithm = [self.pass_metric(self.metrics,0), self.pass_metric(self.metrics1,0), self.pass_metric(self.metrics1,1), self.pass_metric(self.metrics2,0)]
+			if self.metrics2=='dice' or self.metrics2=='jaccard':
+				metrics_algorithm = [self.pass_metric(self.metrics,0), self.pass_metric(self.metrics2,0), self.pass_metric(self.metrics2,1), self.pass_metric(self.metrics1,0)]
+			if self.metrics=='dice' or self.metrics=='jaccard':
+				metrics_algorithm = [self.pass_metric(self.metrics2,0), self.pass_metric(self.metrics,0), self.pass_metric(self.metrics,1), self.pass_metric(self.metrics1,0)]
+			if (self.metrics=='dice' or self.metrics=='jaccard' )and ( self.metrics1=='dice' or self.metrics1=='jaccard'):
+				metrics_algorithm = [self.pass_metric(self.metrics2,0), self.pass_metric(self.metrics,0), self.pass_metric(self.metrics,1), self.pass_metric(self.metrics1,0), self.pass_metric(self.metrics1,1)]
+			if (self.metrics1=='dice' or self.metrics1=='jaccard' )and ( self.metrics2=='dice' or self.metrics2=='jaccard'):
+				metrics_algorithm = [self.pass_metric(self.metrics,0), self.pass_metric(self.metrics2,0), self.pass_metric(self.metrics2,1), self.pass_metric(self.metrics1,0), self.pass_metric(self.metrics1,1)]
+			if (self.metrics=='dice' or self.metrics=='jaccard' )and ( self.metrics2=='dice' or self.metrics2=='jaccard'):
+				metrics_algorithm = [self.pass_metric(self.metrics1,0), self.pass_metric(self.metrics,0), self.pass_metric(self.metrics,1), self.pass_metric(self.metrics2,0), self.pass_metric(self.metrics2,1)]			
+		else:
+			metrics_algorithm = [self.pass_metric(self.metrics,0), self.pass_metric(self.metrics1,0), self.pass_metric(self.metrics2,0)]
+		return metrics_algorithm
+
+###################################### LOSSES MEASUREMENTS ####################################################################
+	def dice(self,y_true, y_pred,class_num=0):
+		batch_dice_coefs = self.hard_sorensen_dice(y_true, y_pred, axis=[1, 2])
+		dice_coefs = K.mean(batch_dice_coefs, axis=0)
+		print("dice_coefs: ")
+		print(dice_coefs)
+		return dice_coefs[class_num]    # HACK for 2-class case
+
+	def jaccard(self,y_true, y_pred,class_num=0):
+		batch_jaccard_coefs = self.hard_jaccard(y_true, y_pred, axis=[1, 2])
+		jaccard_coefs = K.mean(batch_jaccard_coefs, axis=0)
+		return jaccard_coefs[class_num] # HACK for 2-class case
+
+	def soft_sorensen_dice(self,y_true, y_pred, axis=None, smooth=1):
+		intersection = K.sum(y_true * y_pred, axis=axis)
+		area_true = K.sum(y_true, axis=axis)
+		area_pred = K.sum(y_pred, axis=axis)
+		return (2 * intersection + smooth) / (area_true + area_pred + smooth)
+	    
+	def hard_sorensen_dice(self,y_true, y_pred, axis=None, smooth=1):
+		y_true_int = K.round(y_true)
+		y_pred_int = K.round(y_pred)
+		return self.soft_sorensen_dice(y_true_int, y_pred_int, axis, smooth)
+
+	def sorensen_dice_loss(self,y_true, y_pred):
+		# Input tensors have shape (batch_size, height, width, classes)
+		# User must input list of weights with length equal to number of classes
+		#
+		# Ex: for simple binary classification, with the 0th mask
+		# corresponding to the background and the 1st mask corresponding
+		# to the object of interest, we set weights = [0, 1]
+		batch_dice_coefs = self.soft_sorensen_dice(y_true, y_pred, axis=[1, 2])
+		dice_coefs = K.mean(batch_dice_coefs, axis=0)
+		w = K.constant(self.weights) / sum(self.weights)
+		return 1 - K.sum(w * dice_coefs)
+
+	def soft_jaccard(self,y_true, y_pred, axis=None, smooth=1):
+		intersection = K.sum(y_true * y_pred, axis=axis)
+		area_true = K.sum(y_true, axis=axis)
+		area_pred = K.sum(y_pred, axis=axis)
+		union = area_true + area_pred - intersection
+		return (intersection + smooth) / (union + smooth)
+
+	def hard_jaccard(self,y_true, y_pred, axis=None, smooth=1):
+		y_true_int = K.round(y_true)
+		y_pred_int = K.round(y_pred)
+		return self.soft_jaccard(y_true_int, y_pred_int, axis, smooth)
+
+
+	def jaccard_loss(self,y_true, y_pred):
+		batch_jaccard_coefs = self.soft_jaccard(y_true, y_pred, axis=[1, 2])
+		jaccard_coefs = K.mean(batch_jaccard_coefs, axis=0)
+		w = K.constant(self.weights) / sum(self.weights)
+		return 1 - K.sum(w * jaccard_coefs)
+
+	def weighted_categorical_crossentropy(self,y_true, y_pred, epsilon=1e-8):
+		ndim = K.ndim(y_pred)
+		ncategory = K.int_shape(y_pred)[-1]
+		print(ndim,ncategory)
+		# scale predictions so class probabilities of each pixel sum to 1
+		y_pred /= K.sum(y_pred, axis=(ndim-1), keepdims=True)
+		y_pred = K.clip(y_pred, epsilon, 1-epsilon)
+		w = K.constant(self.weights) * (ncategory / sum(self.weights))
+		# first, average over all axis except classes
+		cross_entropies = -K.mean(y_true * K.log(y_pred), axis=tuple(range(ndim-1)))
+		return K.sum(w * cross_entropies)
+
+	def customized_loss(self,y_true, y_pred, alpha=0.0001, beta=3):
+		"""
+		linear combination of MSE and KL divergence.
+		"""
+		loss1 = losses.mean_absolute_error(y_true, y_pred)
+		loss2 = losses.kullback_leibler_divergence(y_true, y_pred)
+		#(alpha/2) *
+		return  loss1 + beta * loss2
+
+	def average_Hausdorff_distance(self,y_true, y_pred):
+		print('gia na doooooooooo')
+		print(y_pred.shape)
+		print((y_true).shape)
+		DHD=[]
+		for i in range(len(y_true)):
+			dhd=directed_hausdorff(y_true[i],y_pred[i])
+			print(dhd)
+			DHD.append(dhd)				
+		AHD=K.mean(DHD, axis=0)
+		print(AHD)
+		return AHD[1]
+
+
+
+
+
+

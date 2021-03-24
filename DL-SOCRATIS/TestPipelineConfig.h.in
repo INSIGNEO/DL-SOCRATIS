@@ -1,0 +1,4 @@
+// the configured options and settings for Tutorial
+#define TestPipeline_VERSION_MAJOR @TestPipeline_VERSION_MAJOR@
+#define TestPipeline_VERSION_MINOR @TestPipeline_VERSION_MINOR@
+

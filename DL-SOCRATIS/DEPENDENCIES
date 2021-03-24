@@ -1,0 +1,9 @@
+ITK,
+VTK,
+cmake,
+Caffe,
+Tenshorflow,
+Keras,
+Opencv,
+ITK(rician)
+https://github.com/hyperrealm/libconfig/blob/master/INSTALL

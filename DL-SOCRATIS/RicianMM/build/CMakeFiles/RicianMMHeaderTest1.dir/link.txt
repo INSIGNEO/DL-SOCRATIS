@@ -1,0 +1,1 @@
+/usr/bin/c++    -msse2  -msse2 -O3 -DNDEBUG     CMakeFiles/RicianMMHeaderTest1.dir/test/RicianMMHeaderTest1.cxx.o  -o /home/michail/software/ITK-5.0a01/build2/bin/RicianMMHeaderTest1 -lRicianMM /home/michail/software/ITK-5.0a01/build2/lib/libitksys-5.0.a -ldl 

@@ -1,0 +1,293 @@
+#Author: Michail Mamalakis
+#Version: 0.1
+#Licence:
+#email:mmamalakis1@sheffield.ac.uk
+
+
+from __future__ import division, print_function
+import cv2
+from auto_segm import create_net, config, datasetnet, store_model
+from auto_segm.utils import vision_outputs
+import argparse
+import logging
+import os
+import numpy as np
+
+class parser_data:
+
+	def __init__ (self, rmn,mmn,data_return='off',save_mode='off') :
+		args = config.parse_arguments()
+		self.roi_model_name=rmn
+		self.main_model_name=mmn
+		self.data_return=data_return
+		self.save_mode=save_mode
+		self.original_image_shape=args.original_image_shape
+		self.STORE_PATH=args.store_data_test
+		self.STORE_PATH1=self.STORE_PATH +'/ROI/train/'
+		self.STORE_PATH2=self.STORE_PATH+'/ROI/test/'
+		self.STORE_PATH_main1=self.STORE_PATH+'/MAIN/train/'
+		self.STORE_PATH_main2=self.STORE_PATH+'/MAIN/test/'
+		# if the paths does not excist create automatic
+		if not os.path.exists(self.STORE_PATH1):
+			os.makedirs(self.STORE_PATH1)
+		if not os.path.exists(self.STORE_PATH2):
+			os.makedirs(self.STORE_PATH2)
+		if not os.path.exists(self.STORE_PATH_main1):
+			os.makedirs(self.STORE_PATH_main1)
+		if not os.path.exists(self.STORE_PATH_main2):
+			os.makedirs(self.STORE_PATH_main2)
+		
+		self.data_extention=args.data_extention
+		self.counter_extention=args.counter_extention
+		self.restore_from_jpg_tif=args.restore_image
+
+		self.label_classes=args.label_classes
+		if self.label_classes=='both':
+			self.classes=2
+		if self.label_classes=='three':
+			self.classes=3
+		if self.label_classes=='four':
+			self.classes=4
+		if self.label_classes=='first':
+			self.classes=1
+		if self.label_classes=='second':
+			self.classes=1
+		if self.label_classes=='third':
+			self.classes=1
+		if self.label_classes=='fourth':
+			self.classes=1	
+		# add more if if need it more classes define (TODO extend in more than 2 classes)
+
+	def pass_train_roi_data(self):	
+		'''
+			pass the X and Y dimmensions  
+		'''
+	
+
+		#test in train datasets
+		prediction_image, prediction_mask_total=[],[]
+		sm=store_model.store_model()
+		dsn=datasetnet.datasetnet('train_pred','roi')
+		Xtest, Y, contour_mask, storetxt = dsn.create_dataset()
+		if Xtest==[]:
+			print(" no training ... ")
+			print(" Continue ... ")
+		else:
+			pred, metric=sm.load_best_callback(Xtest,Y,'roi',self.roi_model_name)
+			print (pred.shape)
+			print('Final train accuracy:', (metric[1]*100.0))
+			# store images 
+			length=len(Xtest)
+			classes=self.classes	
+			o=0
+
+			while o <classes:
+				prediction_mask=[]		
+				for i in range(0,int(length/10)):
+					output, mask_roi, label_mask = dsn.compute_pred_roi(Xtest[i], pred[i],contour_mask[i,:,:,o])
+					#save to images the results
+					if (self.save_mode=='on'):
+						str2=self.STORE_PATH1 + 'ROImasks%s.%s' % (i+((o)*(length)),self.counter_extention)			
+						cv2.imwrite(str2,  label_mask)
+						if o==0:
+                                                        str1=self.STORE_PATH1 + 'ROItrain%s.%s' % (i,self.data_extention)
+                                                        cv2.imwrite(str1,  output)
+
+					prediction_mask.append(label_mask)
+					print(np.array(prediction_mask).shape)
+					if o==0:
+						prediction=np.array(output)	
+						prediction_image.append(prediction)
+
+				if o==0:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])	
+					prediction_mask_total=prediction_mask
+					prediction_image=np.reshape(np.array(prediction_image),[np.array(prediction_image).shape[0],1,np.array(prediction_image).shape[1],np.array(prediction_image).shape[2]])
+				else:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])
+					prediction_mask_total=np.append(prediction_mask,prediction_mask_total,axis=1)	
+				o=o+1
+		print(np.array(prediction_mask_total).shape,np.array(prediction_image).shape)
+		if (self.data_return=='on'):
+			return prediction_image, prediction_mask_total
+			
+
+
+	def pass_test_roi_data(self):	
+		'''
+			pass the X and Y dimmensions  
+		'''
+	
+		#test in test dataset
+		sm=store_model.store_model()
+		prediction_image, prediction_mask_total=[],[]
+		dsn2=datasetnet.datasetnet('test','roi')
+		Xtest2,Y2, contour_mask2, storetxt2 = dsn2.create_dataset()
+
+		if Xtest2==[]:
+			print(" no testing ... ")
+			print(" Continue ... ")
+		else:
+			pred2, metric2=sm.load_best_callback(Xtest2,Y2,'roi',self.roi_model_name)
+			print('Final test accuracy:', (metric2[1]*100.0))
+			print (pred2.shape)
+			length2=len(Xtest2)
+			classes2=self.classes	
+			o=0
+			while o <classes2:
+				prediction_mask=[]		
+				for i in range(0,length2):
+					#print(pred[0].shape)	
+					#print(Xtest[i].shape)	
+					output2, mask_roi2, label_mask2 = dsn2.compute_pred_roi(Xtest2[i], pred2[i],contour_mask2[i,:,:,o])
+					if (self.save_mode=='on'):
+						str2=self.STORE_PATH2 + 'ROImasks%s.%s' % (i+((o)*(length2)),self.counter_extention)			
+						cv2.imwrite(str2,  label_mask2)
+						if o==0:
+							str1=self.STORE_PATH2 + 'ROItest%s.%s' % (i,self.data_extention)
+							cv2.imwrite(str1,  output2)
+
+					prediction_mask.append(label_mask2)
+					print(np.array(prediction_mask).shape)
+					if o==0:
+						prediction=np.array(output2)	
+						prediction_image.append(prediction)
+
+				if o==0:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])	
+					prediction_mask_total=prediction_mask
+					prediction_image=np.reshape(np.array(prediction_image),[np.array(prediction_image).shape[0],1,np.array(prediction_image).shape[1],np.array(prediction_image).shape[2]])
+				else:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])
+					prediction_mask_total=np.append(prediction_mask,prediction_mask_total,axis=1)	
+				o=o+1
+		print(np.array(prediction_mask_total).shape,np.array(prediction_image).shape)
+		# vision images 
+		vo=vision_outputs('roi')
+		vo.store_test_results(metric2)
+		vo.plot_images(5,Xtest2,pred2)
+
+		if (self.data_return=='on'):
+			return prediction_image, prediction_mask_total
+
+	def pass_train_main_data(self):
+		prediction_image,prediction_mask_total=[],[]
+		sm=store_model.store_model()
+		if (self.restore_from_jpg_tif=='on'):
+			dsn=datasetnet.datasetnet('train','main')
+			mainXtest, mainY, maincontour_mask, mainstoretxt = dsn.create_dataset()
+
+		else:
+			data_return=self.data_return
+			save_mode=self.save_mode
+			self.data_return='on'
+			self.save_mode='off'
+			mainXtest,mainY=self.pass_train_roi_data()
+			self.data_return=data_return
+			self.save_mode=save_mode
+
+		if mainXtest==[]:
+			print(" no testing ... ")
+			print(" Continue ... ")
+		else:
+			mainpred, mainmetric=sm.load_best_callback(mainXtest,mainY,'main',self.main_model_name)
+			print('Final train accuracy:', (mainmetric[1]*100.0))
+			print(mainpred.shape)
+			# store images 
+			# store images 
+			length=len(mainXtest)
+			classes=self.classes	
+			o=0
+			while o <classes:	
+				prediction_mask=[]	
+				for i in range(0,length):
+					#print(pred[0].shape)	
+					#print(Xtest[i].shape)	
+					mainoutput  = dsn.compute_pred_main(mainXtest[i], mainpred[i])
+					mainlabel_mask=mainpred[i,:,:,o]
+					if (self.save_mode=='on'):
+						str2=self.STORE_PATH_main1 + 'mainmasks%s.%s' % (i+((o)*(length)),self.counter_extention)			
+						cv2.imwrite(str2,  mainlabel_mask)
+						if o==0:
+							str1=self.STORE_PATH_main1 + 'maintrain%s.%s' % (i,self.data_extention)
+							cv2.imwrite(str1,  mainoutput)
+
+					prediction_mask.append(mainlabel_mask)
+					print(np.array(prediction_mask).shape)
+					if o==0:
+						prediction=np.array(mainoutput)	
+						prediction_image.append(prediction)
+
+				if o==0:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])	
+					prediction_mask_total=prediction_mask
+					prediction_image=np.reshape(np.array(prediction_image),[np.array(prediction_image).shape[0],1,np.array(prediction_image).shape[1],np.array(prediction_image).shape[2]])
+				else:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])
+					prediction_mask_total=np.append(prediction_mask,prediction_mask_total,axis=1)	
+				o=o+1
+		print(np.array(prediction_mask_total).shape,np.array(prediction_image).shape)
+		if (self.data_return=='on'):
+			return prediction_image, prediction_mask_total
+
+	def pass_test_main_data(self):
+		prediction_image,prediction_mask_total=[],[]
+		sm=store_model.store_model()
+		if (self.restore_from_jpg_tif=='on'):
+			dsn=datasetnet.datasetnet('test','main')
+			mainXtest2, mainY2, maincontour_mask2, mainstoretxt2 = dsn.create_dataset()
+
+		else:
+			data_return=self.data_return
+			save_mode=self.save_mode
+			self.data_return='on'
+			self.save_mode='off'
+			mainXtest2,mainY2=self.pass_test_roi_data()
+			self.data_return=data_return
+			self.save_mode=save_mode
+
+		if mainXtest2==[]:
+			print(" no testing ... ")
+			print(" Continue ... ")
+		else:
+			mainpred2, mainmetric2=sm.load_best_callback(mainXtest,mainY,'main',self.main_model_name)
+			# store images 
+			vo=vision_outputs('main')
+			vo.store_test_results(mainmetric2)
+			print('Final test accuracy:', (mainmetric2[1]*100.0))
+
+			# store images 
+			length2=len(mainXtest2)
+			classes2=self.classes
+			o=0
+			while o <classes2:
+				prediction_mask,prediction_mask_old=[],[]		
+				for i in range(0,length2):
+					#print(pred[0].shape)	
+					#print(Xtest[i].shape)	
+					mainoutput2  = dsn2.compute_pred_main(mainXtest2[i], mainpred2[i])
+					mainlabel_mask2=mainpred2[i,:,:,o]
+					if (self.save_mode=='on'):
+						str2=self.STORE_PATH_main2 + 'mainmasks%s.%s' % (i+((o)*(length2)),self.counter_extention)			
+						cv2.imwrite(str2,  mailabel_mask2)
+						if o==0:
+							str1=self.STORE_PATH_main2 + 'maintest%s.%s' % (i,self.data_extention)
+							cv2.imwrite(str1,  mainoutput2)
+					prediction_mask.append(mainlabel_mask2)
+					print(np.array(prediction_mask).shape)
+					if o==0:
+						prediction=np.array(mainoutput2)	
+						prediction_image.append(prediction)
+
+				if o==0:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])	
+					prediction_mask_total=prediction_mask
+					prediction_image=np.reshape(np.array(prediction_image),[np.array(prediction_image).shape[0],1,np.array(prediction_image).shape[1],np.array(prediction_image).shape[2]])
+				else:
+					prediction_mask=np.reshape(np.array(prediction_mask),[np.array(prediction_mask).shape[0],1,np.array(prediction_mask).shape[1],np.array(prediction_mask).shape[2]])
+					prediction_mask_total=np.append(prediction_mask,prediction_mask_total,axis=1)	
+				o=o+1
+		print(np.array(prediction_mask_total).shape,np.array(prediction_image).shape)
+		vo.plot_images(5,mainXtest2,mainpred2)
+		if (self.data_return=='on'):
+			return prediction_image, prediction_mask_total

@@ -1,0 +1,399 @@
+void seedpoints::preprocessing( const char * initial_image){
+
+ std::cout << "Preprocessing of computing of seed points..." << '\n' ;
+  constexpr unsigned int Dimension = 2;
+  using PixelType = unsigned char;
+  using ImageType = itk::Image< PixelType, Dimension >;
+  using ReaderType = itk::ImageFileReader< ImageType >;
+  ReaderType::Pointer reader = ReaderType::New();
+  reader->SetFileName( initial_image );
+typedef itk::Vector< float, 2 > MeasurementVectorType;
+typedef itk::Statistics::ListSample< MeasurementVectorType > SampleType;
+//min
+ SampleType::Pointer samplemin2 = SampleType::New();
+ samplemin2->SetMeasurementVectorSize( 2 );
+//max
+ SampleType::Pointer samplemax2 = SampleType::New();
+ samplemax2->SetMeasurementVectorSize( 2 );
+
+  SampleType::Pointer sample = SampleType::New();
+  MeasurementVectorType mv;
+
+////////////////////convert to double image for itteration/////////////////
+
+  using Out2putPixelType = float;
+  using Out2putImageType = itk::Image< Out2putPixelType, Dimension >;
+
+
+  using FilterType2 = itk::CastImageFilter< ImageType, Out2putImageType >;
+  FilterType2::Pointer filter2 = FilterType2::New();
+  filter2->SetInput( reader->GetOutput() );
+
+  using WriterType2 = itk::ImageFileWriter< Out2putImageType >;
+  WriterType2::Pointer writer2 = WriterType2::New();
+  writer2->SetFileName("draft.nrrd" );
+  writer2->SetInput( filter2->GetOutput() );
+  writer2->Update();
+
+//////////////////start the process/////////////
+Out2putImageType::Pointer inputImage = filter2->GetOutput();
+ImageType::Pointer outputImage = ImageType::New();
+/////////////////copy allocate output image///////////////
+outputImage->SetRegions( inputImage->GetRequestedRegion() );
+outputImage->CopyInformation( inputImage );
+outputImage->Allocate();
+///////////////////////define itterators///////////////////
+typedef itk::ImageRegionConstIterator< Out2putImageType > ConstIteratorType;
+typedef itk::ImageRegionIterator< ImageType > IteratorType;
+
+ConstIteratorType inputIt( inputImage, inputImage->GetRequestedRegion() );
+IteratorType outputIt( outputImage, outputImage->GetRequestedRegion() );
+
+ImageType::IndexType requestedIndex =outputImage->GetRequestedRegion().GetIndex();
+//////////////////create the estimated portion (linear partial volume)/////////////////
+for ( inputIt.GoToBegin(), outputIt.GoToBegin(); !inputIt.IsAtEnd();++inputIt, ++outputIt)
+{
+
+if (inputIt.Get()>=100){
+ ImageType::IndexType idx = inputIt.GetIndex();
+ mv[0]=idx[0];
+ mv[1]=idx[1];
+ 
+ sample->PushBack( mv );
+//std::cout << "index of pixel: " << mv << '\n' ;
+//std::cout << "index of pixel2: " << idx << '\n' ;
+ }//end if
+
+}//end for
+
+//////////////////////////////store in kd-tree/////////////////////
+//(based kd-tree page 410 of https://www.sci.utah.edu/publications/ibanez03/ItkSoftwareGuide.pdf)
+
+typedef itk::Statistics::KdTreeGenerator< SampleType >TreeGeneratorType;
+TreeGeneratorType::Pointer treeGenerator = TreeGeneratorType::New();
+treeGenerator->SetSample( sample );
+treeGenerator->SetBucketSize( 16 );
+treeGenerator->Update();
+
+typedef itk::Statistics::WeightedCentroidKdTreeGenerator< SampleType >CentroidTreeGeneratorType;
+CentroidTreeGeneratorType::Pointer centroidTreeGenerator =CentroidTreeGeneratorType::New();
+centroidTreeGenerator->SetSample( sample );
+centroidTreeGenerator->SetBucketSize( 16 );
+centroidTreeGenerator->Update();
+
+typedef TreeGeneratorType::KdTreeType TreeType;
+typedef TreeType::NearestNeighbors NeighborsType;
+typedef TreeType::KdTreeNodeType NodeType;
+TreeType::Pointer tree = treeGenerator->GetOutput();
+TreeType::Pointer centroidTree = centroidTreeGenerator->GetOutput();
+NodeType* root = tree->GetRoot();
+
+//Test
+//if ( root->IsTerminal() )
+//{
+//std::cout << "Root node is a terminal node." << std::endl;
+//}
+//else
+//{
+//std::cout << "Root node is not a terminal node." << std::endl;
+//}
+//Test
+//unsigned int partitionDimension;
+//float partitionValue ;
+//root->GetParameters( partitionDimension, partitionValue);
+
+
+//std::cout << "Dimension chosen to split the space = "<< partitionDimension << std::endl;
+//std::cout << "Split point on the partition dimension = "<< partitionValue << std::endl;
+//std::cout << "Address of the left chile of the root node = "<< root->Left() << std::endl;
+//std::cout << "Address of the right chile of the root node = "<< root->Right() << std::endl;
+
+root = centroidTree->GetRoot();
+//std::cout << "Number of the measurement vectors under the root node"<< " in the tree hierarchy = " << root->Size() << std::endl;
+NodeType::CentroidType centroid;
+root->GetWeightedCentroid( centroid );
+//std::cout << "Sum of the measurement vectors under the root node = "<< centroid << std::endl;
+
+//////////////////////////define the origin of the pixels//////////////////
+centroid[0]=centroid[0]/(root->Size());
+centroid[1]=centroid[1]/(root->Size());
+
+//std::cout << "The centroid node under the root node = "<< centroid << std::endl;
+//std::cout << "Number of the measurement vectors under the left child"<< " of the root node = " << root->Left()->Size() << std::endl;
+
+
+//////////////////compute the distances from center//////////////////////
+MeasurementVectorType queryPoint;
+queryPoint[0] = centroid[0];
+queryPoint[1] = centroid[1];
+using DistanceMetricType =itk::Statistics::EuclideanDistanceMetric< MeasurementVectorType >;
+DistanceMetricType::Pointer distanceMetric = DistanceMetricType::New();
+DistanceMetricType::OriginType origin(2);
+
+origin[0] = queryPoint[0] ;
+origin[1] = queryPoint[1] ;
+
+distanceMetric->SetOrigin( origin );
+
+unsigned int numberOfNeighbors = root->Size(); //search all the tree
+TreeType::InstanceIdentifierVectorType neighbors;
+tree->Search( queryPoint, numberOfNeighbors, neighbors) ;
+
+//Test
+//std::cout << "kd-tree knn search result:" << std::endl<< "query point = [" << queryPoint << "]" << std::endl<< "k = " << numberOfNeighbors << std::endl;
+//std::cout << "measurement vector : distance" << std::endl;
+ SampleType::Pointer sample2 = SampleType::New();
+ MeasurementVectorType mv2;
+for ( unsigned int i = 0 ; i < numberOfNeighbors ; ++i )
+{
+//std::cout << "query point = [" << queryPoint << "]"<< "[" << tree->GetMeasurementVector( neighbors[i] )<< "] : "<< distanceMetric->Evaluate(tree->GetMeasurementVector( neighbors[i] )) << tree->GetMeasurementVector(i )<< std::endl;
+mv2=distanceMetric->Evaluate(tree->GetMeasurementVector( neighbors[i] ));
+sample2->PushBack(mv2);
+}
+
+/* //////////sort the sample with heapsort technique///////// */
+using SubsampleType = itk::Statistics::Subsample<SampleType>;
+
+  SubsampleType::Pointer subsample = SubsampleType::New();
+  subsample->Clear();
+  subsample->SetSample(sample2);
+  subsample->InitializeWithAllInstances();
+//TEST 
+/*
+ std::cout << std::endl;
+  std::cout << "Unsorted" << std::endl;
+  SubsampleType::Iterator iter = subsample->Begin();
+  while ( iter != subsample->End() )
+    {
+    std::cout << "instance identifier = " << iter.GetInstanceIdentifier()
+              << " \t measurement vector = "
+              << iter.GetMeasurementVector()
+              << std::endl;
+    ++iter;
+    }
+*/
+  int activeDimension = 0;
+  itk::Statistics::Algorithm::HeapSort< SubsampleType >( subsample,activeDimension, 0, subsample->Size() );
+//TEST 
+/*
+  std::cout << std::endl;
+  std::cout << "HeapSort" << std::endl;
+  SubsampleType::Iterator iter2 = subsample->Begin();
+  while ( iter2 != subsample->End() )
+    {
+    std::cout << "instance identifier = " << iter2.GetInstanceIdentifier()
+              << " \t measurement vector = "
+              << iter2.GetMeasurementVector()
+              << std::endl;
+    ++iter2;
+    }
+*/
+
+ //store in two lists tree the distances
+
+
+
+/*/////////sort from max to min.../////////*/
+unsigned int TH=numberOfNeighbors*1.00/14.00;  //Threshold of more number of max points need modification
+int TH2=5;
+int TH3=10;
+//min
+ MeasurementVectorType mvmin;
+ SampleType::Pointer samplemin = SampleType::New();
+ samplemin->SetMeasurementVectorSize( 2 );
+//max
+ MeasurementVectorType mvmax;
+ SampleType::Pointer samplemax = SampleType::New();
+ samplemax->SetMeasurementVectorSize( 2 );
+//Test
+//std::cout<<"MIN  "<<std::endl;
+for ( unsigned int i = 0 ; i < (subsample->Size())/2-TH ; ++i )
+{
+mvmin=subsample->GetMeasurementVector(i);
+
+samplemin->PushBack(mvmin);
+//std::cout<<subsample->GetMeasurementVector(i)<<std::endl;
+}
+//std::cout<<"MAX  "<<std::endl;
+for ( unsigned int o = (subsample->Size())/2-TH ; o < (subsample->Size()) ; ++o )
+{
+mvmax=subsample->GetMeasurementVector(o);
+
+samplemax->PushBack(mvmax);
+
+//std::cout<<mvmax<<std::endl;
+}
+
+
+//min tree (endocardium)
+
+typedef itk::Statistics::KdTreeGenerator< SampleType > TreeGeneratorTypemin;
+TreeGeneratorTypemin::Pointer treeGeneratormin = TreeGeneratorTypemin::New();
+treeGeneratormin->SetSample( samplemin );
+treeGeneratormin->SetBucketSize( 16 );
+treeGeneratormin->Update();
+
+typedef TreeGeneratorTypemin::KdTreeType TreeTypemin;
+typedef TreeTypemin::NearestNeighbors NeighborsType;
+typedef TreeTypemin::KdTreeNodeType NodeTypemin;
+TreeTypemin::Pointer treemin = treeGeneratormin->GetOutput();
+NodeTypemin* rootmin = treemin->GetRoot();
+
+//max tree (epicardium)
+
+typedef itk::Statistics::KdTreeGenerator< SampleType > TreeGeneratorTypemax;
+TreeGeneratorTypemax::Pointer treeGeneratormax = TreeGeneratorTypemax::New();
+treeGeneratormax->SetSample( samplemax );
+treeGeneratormax->SetBucketSize( 16 );
+treeGeneratormax->Update();
+
+
+typedef TreeGeneratorTypemax::KdTreeType TreeTypemax;
+typedef TreeTypemax::NearestNeighbors NeighborsTypemax;
+typedef TreeTypemax::KdTreeNodeType NodeTypemax;
+TreeTypemax::Pointer treemax = treeGeneratormax->GetOutput();
+NodeTypemax* rootmax = treemax->GetRoot();
+
+//max tree (epicardium)
+
+typedef itk::Statistics::KdTreeGenerator< SampleType > TreeGeneratorType2;
+TreeGeneratorType2::Pointer treeGenerator2 = TreeGeneratorType2::New();
+treeGenerator2->SetSample( sample2 );
+treeGenerator2->SetBucketSize( 16 );
+treeGenerator2->Update();
+
+
+typedef TreeGeneratorType2::KdTreeType TreeType2;
+typedef TreeType2::NearestNeighbors NeighborsType2;
+typedef TreeType2::KdTreeNodeType NodeType2;
+TreeType2::Pointer tree2 = treeGenerator2->GetOutput();
+NodeType2* root2 = tree2->GetRoot();
+
+// search the two kd-tree to detect the list and store the pixels of each tree
+
+
+MeasurementVectorType queryPoint_tree_node;
+TreeType2::InstanceIdentifierVectorType neighbors2;
+
+unsigned int numberOfNeighborsmax = rootmax->Size();
+unsigned int numberOfNeighborsmin = rootmin->Size();
+
+for ( unsigned int i = 0 ; i < numberOfNeighbors/2+TH ; ++i )
+{
+queryPoint_tree_node=treemax->GetMeasurementVector(i);
+queryPoint_tree_node[1]=0;
+	for ( unsigned int ii = 0 ; ii < numberOfNeighbors ; ++ii ){
+       // std::cout << "Test [" <<tree2->GetMeasurementVector(ii )[0]<< "] : "<<queryPoint_tree_node[0]<<std::endl;
+       // std::cout << "Index [" <<tree->GetMeasurementVector(ii )<< "]  "<<std::endl;
+	if(tree2->GetMeasurementVector(ii )[0]== queryPoint_tree_node[0]){
+		mvmax=tree->GetMeasurementVector( neighbors[ii] );
+		samplemax2->PushBack(mvmax);
+		//std::cout << "MAX [" <<mvmax<< "] : "<<queryPoint_tree_node[0]<<std::endl;
+		}
+	}
+}
+
+
+for ( unsigned int i = 0 ; i < numberOfNeighbors/2-TH ; ++i )
+{
+queryPoint_tree_node=treemin->GetMeasurementVector(i);
+queryPoint_tree_node[1]=0;
+	for ( unsigned int io = 0 ; io < numberOfNeighbors ; ++io ){
+	if(tree2->GetMeasurementVector(io )[0]== queryPoint_tree_node[0]){
+		mvmin=tree->GetMeasurementVector( neighbors[io] );
+		samplemin2->PushBack(mvmin);
+		//std::cout << "Min [" <<mvmin<< "] : "<<queryPoint_tree_node[0]<<std::endl;
+		}
+	}
+}
+
+
+
+
+
+// TEST of the epicardium and endocardium process///
+
+
+
+
+MeasurementVectorType test;
+typedef itk::Vector< int, 2 > MeasurementVectorType2;
+MeasurementVectorType2 centre;
+
+for ( inputIt.GoToBegin(), outputIt.GoToBegin(); !inputIt.IsAtEnd();++inputIt, ++outputIt)
+{
+int terminate=0;
+ ImageType::IndexType idx2 = inputIt.GetIndex();
+ test[0]=idx2[0];
+ test[1]=idx2[1];
+outputIt.Set(0);
+for ( unsigned int count = 0 ; count < numberOfNeighbors/2-TH ; ++count )
+{
+
+if (test==samplemin2->GetMeasurementVector(count)){
+outputIt.Set(255 );
+terminate=1;
+//std::cout << " min "<<test<<std::endl;
+}//end if
+if(terminate==1){count=numberOfNeighbors;}
+
+centre[0]=queryPoint[0];
+centre[1]=queryPoint[1];
+
+if(test==centre ){outputIt.Set(200);}
+
+}//end for
+
+
+}//end for
+//Write new image
+
+  using WriterType = itk::ImageFileWriter< ImageType >;
+  WriterType::Pointer writer = WriterType::New();
+  writer->SetFileName( "b_endo.jpg" );
+  writer->SetInput( outputImage );
+  writer->Update();
+
+//kmeans
+
+
+//write epicardium
+
+for ( inputIt.GoToBegin(), outputIt.GoToBegin(); !inputIt.IsAtEnd();++inputIt, ++outputIt)
+{
+int terminate=0;
+ ImageType::IndexType idx2 = inputIt.GetIndex();
+ test[0]=idx2[0];
+ test[1]=idx2[1];
+outputIt.Set(0);
+for ( unsigned int count = 0 ; count < numberOfNeighbors/2+TH ; ++count )
+{
+if (test==samplemax2->GetMeasurementVector(count)){
+outputIt.Set(255 );
+terminate=1;
+//std::cout << "max "<<test<<std::endl;
+}
+if(terminate==1){count=numberOfNeighbors;}
+
+}//end for
+}//end for
+
+//Write new image
+
+  using WriterType3 = itk::ImageFileWriter< ImageType >;
+  WriterType3::Pointer writer3 = WriterType3::New();
+  writer3->SetFileName( "b_epi.jpg" );
+  writer3->SetInput( outputImage );
+  writer3->Update();
+
+std::shared_ptr<BinaryImage> BI =std::make_shared<BinaryImage>();
+BI->Image_binary("b_epi.jpg","b_epi.jpg", 200,255);
+BI->Image_binary("b_endo.jpg","b_endo.jpg", 200,255);
+
+
+samplemin3=samplemin2;
+samplemax3=samplemax2;
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////

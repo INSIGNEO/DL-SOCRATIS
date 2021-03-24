@@ -1,0 +1,196 @@
+// contacting info 
+
+title = "Configuration File for auto_segm version 0.1 ";
+author= "Michail Mamalakis";
+email= "mmamalakis1@sheffield.ac.uk";
+license= "all right reserved";
+// functionallity of code
+
+init_segment_data=false;
+atlas=false;
+deeplearning=false;
+segment_data=false;
+evaluate_results=true;
+interpolate_3D=false;
+deformation=false;
+sensitivity=false;
+translation=false;
+
+// initial segmentation part
+translation_space =
+{
+general={	     initial_image_space="LGE"; //the initial translation space image
+		     final_image_space="cine"; //the final translation space image
+};
+
+paths={
+
+	     //data_path = ./../auto_segm/CycleGAN/datasets->() (/LGE2cine_trans/testA) or (/LGE2cine_trans/testB)  "please include the data in this path"
+	     
+	     trans_python_script="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/Initial_Segmentation/scripts_translation/";
+		store_path="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/Input/cgan_images/image/";	    
+	   	     // be sure that this path is in the script configuration of atlas or DL for initial segmentation
+	     //type_of_input_data="dcm"; //dcm of nii	     
+};
+};
+
+// initial segmentation part
+initial_segmentation =
+{
+general={	     heart_phase="ES"; //ES endsystolic or ED enddiastolic or BT for both comparizon
+};
+
+atlas={
+
+	     data_path ="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/Input/LGE_MRI/";
+	     landmarks_path="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/landmarks/LGE_MRI/"; 
+	     type_of_input_data="dcm"; //dcm of nii
+
+	     
+};
+
+deeplearning={
+	     store_data_path ="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/Data/ES/MAIN/test/";
+	     configuration_file="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/Initial_Segmentation/scripts/Configuration_file/"; 
+	     python_script="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/Initial_Segmentation/scripts/";
+	     num_classes=2;
+};
+
+
+};
+
+// segmentation part - https://repo.continuum.io/pkgs/main/linux-64/pep8-1.7.0-py36h26ade29_0.tar.bz2/linux-64::pep8==1.7.0=py36h26ade29_0
+
+segmentation =
+{
+general = { segmentation_case="scar_bz"
+	     //type_of_input_data="dcm"; //dcm of nii
+};
+paths = {
+	     myofolder_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/myo_20inter_bz/"; //LGE_1
+	     ROIfolder_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/ROI_LGE_ES_inter/";
+	     store_scars_results_path ="../../DATA/Results/LGE_scar_bz_25n/"; //LGE_1b
+patient_folders=["1","2","3","4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17","18", "19", "20" ];  
+	     number_of_images = [7, 8, 7, 6, 7, 7, 8, 7, 6, 7, 7, 8, 7, 6, 7, 6, 7, 7, 8, 7 ];//intra
+	};
+parameter = { 
+
+	     segm_border_zone_bool=true;
+	     threshold_of_scar_intensity=45;
+};
+
+
+
+//patient_folders=["1","2","3","4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17","18", "19", "20" ];  
+//	     number_of_images = [ 7, 8, 8, 6, 7, 8, 7, 8, 6, 8, 7, 8, 7, 9, 6, 6, 7, 7, 9, 7];
+
+//LGE40= [15,15,15,15,15,15,15,15,15,15,15,15,10,15,15,10,15,15,14,15,12,15,15,15,15,15,15,15,15,15,15,15,15,15,15,12,14,15]; nroi
+//LGE_40:[15,15,15,15,14,16,15,16,15,16,16,15,9,16,15,10,14,15,14,15,11,15,15,15,14,15,15,15,15,16,15,14,16,15,15,15,14,16]; roi
+
+//intra reduced bz  7, 8, 8, 6, 7, 6, 6, 7, 5, 7, 6, 7, 5, 6, 6, 6, 6, 7, 7, 5
+};
+
+// segmentation part
+evaluation=
+{
+general = { number_of_experts=3;
+	     //type_of_input_data="dcm"; //dcm of nii
+};
+paths = {
+	     copy_from_store_scar_result=true;
+
+	     manual_labels_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/DATA/Results/manual/inter/all_scbz/";
+	     predict_labels_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/DATA/Results/predict/scar-bz-inter25n/"; //create mkdir and delete the ES/MAIN/test/*
+patient_folders=["1","2","3","4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17","18", "19", "20" ];  
+	     number_of_images = [ 7, 8, 7, 6, 7, 6, 6, 7, 5, 7, 6, 7, 5, 6, 6, 6, 6, 7, 7, 5];
+	     store_results_metric = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/DATA/Results/metric/"; 
+	};
+
+parameter = { 
+
+	     rotation_pred_mask=-90.0;
+	     scale_pred_mask=0.5;
+	     center_pred_mask=[256, 256];
+};
+
+
+};
+// segmentation part
+interpolation_3D={
+paths = {    slice3D_manual_data=false;
+	     manual_3Dlabel_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/manual/3D/";
+	     manual_labels_path  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/DATA/Results/manual/";
+
+	     interpolate_2d_to_3D_predict_data=true;
+ 	     store_scars_results_path ="/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/DATA/Results/3D/";
+patient_folders=["1","2", "3","4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17","18", "19", "20" ];  
+	     number_of_images = [7,  8, 8, 6, 7, 8, 7, 8, 6, 8, 7, 8, 7, 9, 6, 6, 7, 7, 9, 7];
+
+	};
+
+parameter = { 
+
+	     visualize_3D_scars=true;
+	     visualize_3D_epi=false;
+	     visualize_3D_endo=false;
+	     gap_of_mri=5;
+	     alpha_vtkDelaunay3D=3.5;
+
+};
+
+};
+
+
+Deformation={
+
+general2={
+
+		deeplearning=true;
+
+	};
+
+paths = {   
+	     image_move  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/Input/image_ED_dl/image/";
+	     image_fix  = "/home/michail/Desktop/PHD_BASIC_WORK_FILES/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE_generalization/data_internal/Input/image_ES_dl/image/";
+
+	     store_path = "/home/michail/Desktop/test_test/";
+
+	};
+
+
+};
+
+
+
+Sensitivity={
+
+general={
+
+		parameters=[true,true,true,true,true]; //endo_rate, epi_rate, kmean_portion, rgmm_portion, rgmm-kmean_portion
+		lower_border=[0.5, 0.5, 0.25, 0.25, 0.25];
+		higher_border=[2.5, 2.5, 1.0, 1.0, 1.0];
+		initial_SD=[0.25, 0.25, 0.1, 0.1, 0.1];
+		sensitivity_mode="LC"; //GL for global LC for local
+	};
+
+paths = {   	     
+	        store_path_results = "/home/michail/Desktop/test_sens/";
+
+	};
+
+
+};
+
+
+
+
+//[10, 8, 9, 9, 10, 9, 9, 10, 7, 9, 8, 9, 8, 10, 7, 7, 8, 8, 10, 8]; // LGE my data
+
+//[8, 9, 9, 7, 8, 9, 8, 9, 7, 9, 8, 9, 8, 10, 7, 7, 8, 8, 10, 8]; //ED miccai
+
+//[8, 9, 9, 7, 8, 9, 8, 9, 7, 9, 8, 9, 8, 10, 7, 7, 8, 8, 10, 8];  //ES miccai
+
+
+// //dl
+
+// [8, 9, 9, 7, 8, 9, 8, 9, 7, 9, 8, 9, 8, 10, 7, 7, 8, 8, 10, 8];atlases

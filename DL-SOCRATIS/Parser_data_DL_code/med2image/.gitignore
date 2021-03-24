@@ -1,0 +1,10 @@
+*~
+*.DS_Store
+__pycache__
+docs/build
+.coverage
+htmlcov
+.docker
+.idea/
+dist/
+med2image.egg-info/

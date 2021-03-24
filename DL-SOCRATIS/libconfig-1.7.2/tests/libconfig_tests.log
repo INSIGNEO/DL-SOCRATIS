@@ -1,0 +1,32 @@
+[TEST] ParsingAndFormatting
+parsing testdata/input_0.cfg
+parsing testdata/input_1.cfg
+parsing testdata/input_2.cfg
+parsing testdata/input_3.cfg
+parsing testdata/input_4.cfg
+parsing testdata/input_5.cfg
+parsing testdata/input_6.cfg
+[ OK ] ParsingAndFormatting
+[TEST] ParseInvalidFiles
+[ OK ] ParseInvalidFiles
+[TEST] ParseInvalidStrings
+[ OK ] ParseInvalidStrings
+[TEST] BigInt1
+[ OK ] BigInt1
+[TEST] BigInt2
+[ OK ] BigInt2
+[TEST] BigInt3
+[ OK ] BigInt3
+[TEST] BigInt4
+[ OK ] BigInt4
+[TEST] BigInt5
+[ OK ] BigInt5
+[TEST] BigInt6
+[ OK ] BigInt6
+[TEST] BigInt7
+[ OK ] BigInt7
+[TEST] RemoveSetting
+[ OK ] RemoveSetting
+[TEST] EscapedStrings
+[ OK ] EscapedStrings
+12 tests; 12 passed, 0 failed

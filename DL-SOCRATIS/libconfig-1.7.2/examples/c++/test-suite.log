@@ -1,0 +1,19 @@
+==================================================
+   libconfig 1.7.2: examples/c++/test-suite.log
+==================================================
+
+# TOTAL: 4
+# PASS:  3
+# SKIP:  0
+# XFAIL: 1
+# FAIL:  0
+# XPASS: 0
+# ERROR: 0
+
+.. contents:: :depth: 2
+
+XFAIL: example4
+===============
+
+Parse error at invalid.cfg:6 - cannot open include file
+

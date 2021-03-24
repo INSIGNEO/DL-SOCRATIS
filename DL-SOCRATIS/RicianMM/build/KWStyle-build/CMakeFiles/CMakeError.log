@@ -1,0 +1,75 @@
+Checking whether C++ compiler has '__int64' failed to compile with the following output:
+Change Dir: /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_50663/fast"
+make[3]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+/usr/bin/make -f CMakeFiles/cmTC_50663.dir/build.make CMakeFiles/cmTC_50663.dir/build
+make[4]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_50663.dir/kwsysPlatformTestsCXX.cxx.o
+/usr/bin/c++  -DTEST_KWSYS_CXX_HAS___INT64  -msse2  -msse2    -o CMakeFiles/cmTC_50663.dir/kwsysPlatformTestsCXX.cxx.o -c /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:27:1: error: ‘__int64’ does not name a type
+ __int64 f(__int64 n) { return n; }
+ ^
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx: In function ‘int main()’:
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:30:3: error: ‘__int64’ was not declared in this scope
+   __int64 n = 0;
+   ^
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:31:29: error: ‘n’ was not declared in this scope
+   return static_cast<int>(f(n));
+                             ^
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:31:30: error: ‘f’ was not declared in this scope
+   return static_cast<int>(f(n));
+                              ^
+CMakeFiles/cmTC_50663.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_50663.dir/kwsysPlatformTestsCXX.cxx.o' failed
+make[4]: *** [CMakeFiles/cmTC_50663.dir/kwsysPlatformTestsCXX.cxx.o] Error 1
+make[4]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_50663/fast' failed
+make[3]: *** [cmTC_50663/fast] Error 2
+make[3]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+
+
+Checking whether CXX compiler has environ in stdlib.h failed to compile with the following output:
+Change Dir: /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_b6356/fast"
+make[3]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+/usr/bin/make -f CMakeFiles/cmTC_b6356.dir/build.make CMakeFiles/cmTC_b6356.dir/build
+make[4]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_b6356.dir/kwsysPlatformTestsCXX.cxx.o
+/usr/bin/c++  -DTEST_KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H  -msse2  -msse2    -o CMakeFiles/cmTC_b6356.dir/kwsysPlatformTestsCXX.cxx.o -c /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx: In function ‘int main()’:
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:189:13: error: ‘environ’ was not declared in this scope
+   char* e = environ[0];
+             ^
+CMakeFiles/cmTC_b6356.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_b6356.dir/kwsysPlatformTestsCXX.cxx.o' failed
+make[4]: *** [CMakeFiles/cmTC_b6356.dir/kwsysPlatformTestsCXX.cxx.o] Error 1
+make[4]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_b6356/fast' failed
+make[3]: *** [cmTC_b6356/fast] Error 2
+make[3]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+
+
+Checking whether CXX compiler struct stat has st_mtimespec member failed to compile with the following output:
+Change Dir: /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_ca9a0/fast"
+make[3]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+/usr/bin/make -f CMakeFiles/cmTC_ca9a0.dir/build.make CMakeFiles/cmTC_ca9a0.dir/build
+make[4]: Entering directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_ca9a0.dir/kwsysPlatformTestsCXX.cxx.o
+/usr/bin/c++  -DTEST_KWSYS_CXX_STAT_HAS_ST_MTIMESPEC  -msse2  -msse2    -o CMakeFiles/cmTC_ca9a0.dir/kwsysPlatformTestsCXX.cxx.o -c /home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx: In function ‘int main()’:
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:55:15: error: ‘struct stat’ has no member named ‘st_mtimespec’
+   (void)stat1.st_mtimespec.tv_sec;
+               ^
+/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle/Utilities/KWSys/kwsysPlatformTestsCXX.cxx:56:15: error: ‘struct stat’ has no member named ‘st_mtimespec’
+   (void)stat1.st_mtimespec.tv_nsec;
+               ^
+CMakeFiles/cmTC_ca9a0.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_ca9a0.dir/kwsysPlatformTestsCXX.cxx.o' failed
+make[4]: *** [CMakeFiles/cmTC_ca9a0.dir/kwsysPlatformTestsCXX.cxx.o] Error 1
+make[4]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_ca9a0/fast' failed
+make[3]: *** [cmTC_ca9a0/fast] Error 2
+make[3]: Leaving directory '/home/michail/Desktop/PHD_INSIGNEO/PHD/case_study/scedule_work/feasibility_of_project/SEGMENTATION_PIPELINE/CODE/RicianMM/build/KWStyle-build/Utilities/KWSys/CMakeFiles/CMakeTmp'
+
+
