@@ -631,7 +631,7 @@ to attach them to the start of each source file to most effectively
 state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
-    DL-SOCRATIS
+    DL-SOCRATIS: Deep learning automatic segmentation pipelien of LV with scars in LGE-MRI and cive-MRI images (CMR)
     Copyright (C) 2021  Michail Mamalakis
 
     This program is free software: you can redistribute it and/or modify
